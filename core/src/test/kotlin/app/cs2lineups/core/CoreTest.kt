@@ -60,3 +60,35 @@ class GetposTest {
         assertEquals(null, Getpos.parse("hello"))
     }
 }
+
+class TargetsTest {
+    private fun lineup(id: String, g: Grenade, from: WorldPos, to: WorldPos, name: String = id) = Lineup(
+        id = id, title = id, grenade = g, from = from, fromName = "x",
+        target = to, targetName = name, aim = Aim("a"),
+    )
+
+    @Test
+    fun `groups nearby landing spots of the same grenade`() {
+        val ls = listOf(
+            lineup("a", Grenade.SMOKE, WorldPos(0.0, 0.0), WorldPos(1000.0, 1000.0), "B doors"),
+            lineup("b", Grenade.SMOKE, WorldPos(500.0, 0.0), WorldPos(1100.0, 1050.0), "B doors"),
+            lineup("c", Grenade.FLASH, WorldPos(0.0, 0.0), WorldPos(1000.0, 1000.0)),
+            lineup("d", Grenade.SMOKE, WorldPos(0.0, 0.0), WorldPos(3000.0, 3000.0)),
+        )
+        val ts = Targets.group(ls)
+        assertEquals(3, ts.size)
+        val doors = ts.single { it.name == "B doors" }
+        assertEquals(listOf("a", "b"), doors.lineups.map { it.id })
+    }
+
+    @Test
+    fun `throw options are sorted by distance from me`() {
+        val t = Targets.group(listOf(
+            lineup("far", Grenade.SMOKE, WorldPos(2000.0, 0.0), WorldPos(0.0, 1000.0)),
+            lineup("near", Grenade.SMOKE, WorldPos(100.0, 0.0), WorldPos(0.0, 1000.0)),
+        )).single()
+        assertEquals(listOf("near", "far"), Targets.throwOptions(t, WorldPos(0.0, 0.0)).map { it.lineup.id })
+        assertTrue(Targets.reachable(t, WorldPos(0.0, 0.0)))
+        assertTrue(!Targets.reachable(t, WorldPos(-5000.0, 0.0)))
+    }
+}

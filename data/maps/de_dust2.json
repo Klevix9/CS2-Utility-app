@@ -14,14 +14,22 @@
       "title": "Xbox smoke",
       "grenade": "smoke",
       "side": "t",
-      "from": { "x": -350, "y": -820 },
+      "from": {
+        "x": -350,
+        "y": -820
+      },
       "fromName": "T spawn",
-      "target": { "x": -380, "y": 1350 },
+      "target": {
+        "x": -380,
+        "y": 1350
+      },
       "targetName": "Xbox (mid)",
       "stance": "stand",
       "movement": "jump",
       "click": "left",
-      "aim": { "description": "PLACEHOLDER: record the aim point in-game." },
+      "aim": {
+        "description": "PLACEHOLDER: record the aim point in-game."
+      },
       "placeholder": true
     },
     {
@@ -29,14 +37,22 @@
       "title": "CT cross smoke",
       "grenade": "smoke",
       "side": "t",
-      "from": { "x": 600, "y": 420 },
+      "from": {
+        "x": 600,
+        "y": 420
+      },
       "fromName": "Outside long doors",
-      "target": { "x": 1000, "y": 2300 },
+      "target": {
+        "x": 1000,
+        "y": 2300
+      },
       "targetName": "CT spawn cross (A)",
       "stance": "stand",
       "movement": "jump",
       "click": "left",
-      "aim": { "description": "PLACEHOLDER: record the aim point in-game." },
+      "aim": {
+        "description": "PLACEHOLDER: record the aim point in-game."
+      },
       "placeholder": true
     },
     {
@@ -44,14 +60,22 @@
       "title": "Long corner pop flash",
       "grenade": "flash",
       "side": "t",
-      "from": { "x": 750, "y": 600 },
+      "from": {
+        "x": 750,
+        "y": 600
+      },
       "fromName": "Long doors",
-      "target": { "x": 1250, "y": 900 },
+      "target": {
+        "x": 1250,
+        "y": 900
+      },
       "targetName": "Long corner",
       "stance": "stand",
       "movement": "still",
       "click": "right",
-      "aim": { "description": "PLACEHOLDER: record the aim point in-game." },
+      "aim": {
+        "description": "PLACEHOLDER: record the aim point in-game."
+      },
       "placeholder": true
     },
     {
@@ -59,14 +83,22 @@
       "title": "Default A molotov",
       "grenade": "molotov",
       "side": "t",
-      "from": { "x": 1350, "y": 1200 },
+      "from": {
+        "x": 1350,
+        "y": 1200
+      },
       "fromName": "Long A (pit side)",
-      "target": { "x": 1100, "y": 2500 },
+      "target": {
+        "x": 1100,
+        "y": 2500
+      },
       "targetName": "A site default",
       "stance": "stand",
       "movement": "jump",
       "click": "left",
-      "aim": { "description": "PLACEHOLDER: record the aim point in-game." },
+      "aim": {
+        "description": "PLACEHOLDER: record the aim point in-game."
+      },
       "placeholder": true
     },
     {
@@ -74,14 +106,22 @@
       "title": "Short (cat) to A smoke",
       "grenade": "smoke",
       "side": "t",
-      "from": { "x": -450, "y": 450 },
+      "from": {
+        "x": -450,
+        "y": 450
+      },
       "fromName": "Top mid",
-      "target": { "x": 500, "y": 2350 },
+      "target": {
+        "x": 500,
+        "y": 2350
+      },
       "targetName": "CT to A short",
       "stance": "stand",
       "movement": "jump",
       "click": "left",
-      "aim": { "description": "PLACEHOLDER: record the aim point in-game." },
+      "aim": {
+        "description": "PLACEHOLDER: record the aim point in-game."
+      },
       "placeholder": true
     },
     {
@@ -89,14 +129,22 @@
       "title": "B doors smoke",
       "grenade": "smoke",
       "side": "t",
-      "from": { "x": -1950, "y": 1250 },
+      "from": {
+        "x": -1950,
+        "y": 1250
+      },
       "fromName": "Upper tunnels",
-      "target": { "x": -1300, "y": 2450 },
+      "target": {
+        "x": -1300,
+        "y": 2450
+      },
       "targetName": "B doors",
       "stance": "stand",
       "movement": "still",
       "click": "left",
-      "aim": { "description": "PLACEHOLDER: record the aim point in-game." },
+      "aim": {
+        "description": "PLACEHOLDER: record the aim point in-game."
+      },
       "placeholder": true
     },
     {
@@ -104,14 +152,22 @@
       "title": "B window smoke",
       "grenade": "smoke",
       "side": "t",
-      "from": { "x": -2000, "y": 1300 },
+      "from": {
+        "x": -2000,
+        "y": 1300
+      },
       "fromName": "Upper tunnels",
-      "target": { "x": -1400, "y": 2750 },
+      "target": {
+        "x": -1400,
+        "y": 2750
+      },
       "targetName": "B window",
       "stance": "stand",
       "movement": "jump",
       "click": "left",
-      "aim": { "description": "PLACEHOLDER: record the aim point in-game." },
+      "aim": {
+        "description": "PLACEHOLDER: record the aim point in-game."
+      },
       "placeholder": true
     },
     {
@@ -119,14 +175,22 @@
       "title": "B site pop flash",
       "grenade": "flash",
       "side": "t",
-      "from": { "x": -1950, "y": 1400 },
+      "from": {
+        "x": -1950,
+        "y": 1400
+      },
       "fromName": "Upper tunnels exit",
-      "target": { "x": -1700, "y": 2500 },
+      "target": {
+        "x": -1700,
+        "y": 2500
+      },
       "targetName": "Over B site",
       "stance": "stand",
       "movement": "still",
       "click": "both",
-      "aim": { "description": "PLACEHOLDER: record the aim point in-game." },
+      "aim": {
+        "description": "PLACEHOLDER: record the aim point in-game."
+      },
       "placeholder": true
     },
     {
@@ -134,14 +198,22 @@
       "title": "HE car / back plat",
       "grenade": "he",
       "side": "t",
-      "from": { "x": -1950, "y": 1300 },
+      "from": {
+        "x": -1950,
+        "y": 1300
+      },
       "fromName": "Upper tunnels",
-      "target": { "x": -1900, "y": 2700 },
+      "target": {
+        "x": -1900,
+        "y": 2700
+      },
       "targetName": "B car",
       "stance": "stand",
       "movement": "jump",
       "click": "left",
-      "aim": { "description": "PLACEHOLDER: record the aim point in-game." },
+      "aim": {
+        "description": "PLACEHOLDER: record the aim point in-game."
+      },
       "placeholder": true
     },
     {
@@ -149,14 +221,22 @@
       "title": "Long doors molotov",
       "grenade": "molotov",
       "side": "ct",
-      "from": { "x": 1200, "y": 1500 },
+      "from": {
+        "x": 1200,
+        "y": 1500
+      },
       "fromName": "Long A (CT side)",
-      "target": { "x": 650, "y": 500 },
+      "target": {
+        "x": 650,
+        "y": 500
+      },
       "targetName": "Long doors",
       "stance": "stand",
       "movement": "jump",
       "click": "left",
-      "aim": { "description": "PLACEHOLDER: record the aim point in-game." },
+      "aim": {
+        "description": "PLACEHOLDER: record the aim point in-game."
+      },
       "placeholder": true
     },
     {
@@ -164,14 +244,22 @@
       "title": "Upper tunnels flash",
       "grenade": "flash",
       "side": "ct",
-      "from": { "x": -1600, "y": 2500 },
+      "from": {
+        "x": -1600,
+        "y": 2500
+      },
       "fromName": "B site",
-      "target": { "x": -1950, "y": 1500 },
+      "target": {
+        "x": -1950,
+        "y": 1500
+      },
       "targetName": "Upper tunnels exit",
       "stance": "stand",
       "movement": "still",
       "click": "left",
-      "aim": { "description": "PLACEHOLDER: record the aim point in-game." },
+      "aim": {
+        "description": "PLACEHOLDER: record the aim point in-game."
+      },
       "placeholder": true
     },
     {
@@ -179,14 +267,252 @@
       "title": "Mid doors HE",
       "grenade": "he",
       "side": "ct",
-      "from": { "x": -350, "y": 2100 },
+      "from": {
+        "x": -350,
+        "y": 2100
+      },
       "fromName": "Mid doors (CT side)",
-      "target": { "x": -450, "y": 900 },
+      "target": {
+        "x": -450,
+        "y": 900
+      },
       "targetName": "Lower mid",
       "stance": "stand",
       "movement": "still",
       "click": "left",
-      "aim": { "description": "PLACEHOLDER: record the aim point in-game." },
+      "aim": {
+        "description": "PLACEHOLDER: record the aim point in-game."
+      },
+      "placeholder": true
+    },
+    {
+      "id": "d2-t-b-door-smoke-from-outside-tunnels",
+      "title": "B doors smoke",
+      "grenade": "smoke",
+      "side": "t",
+      "from": {
+        "x": -1900,
+        "y": 400
+      },
+      "fromName": "Outside tunnels",
+      "target": {
+        "x": -1300,
+        "y": 2450
+      },
+      "targetName": "B doors",
+      "stance": "stand",
+      "movement": "jump",
+      "click": "left",
+      "aim": {
+        "description": "PLACEHOLDER: record the aim point in-game."
+      },
+      "placeholder": true
+    },
+    {
+      "id": "d2-t-b-door-smoke-from-tunnel-stairs",
+      "title": "B doors smoke",
+      "grenade": "smoke",
+      "side": "t",
+      "from": {
+        "x": -1700,
+        "y": 1150
+      },
+      "fromName": "Tunnel stairs",
+      "target": {
+        "x": -1300,
+        "y": 2450
+      },
+      "targetName": "B doors",
+      "stance": "stand",
+      "movement": "still",
+      "click": "left",
+      "aim": {
+        "description": "PLACEHOLDER: record the aim point in-game."
+      },
+      "placeholder": true
+    },
+    {
+      "id": "d2-t-b-window-smoke-from-outside-tunnels",
+      "title": "B window smoke",
+      "grenade": "smoke",
+      "side": "t",
+      "from": {
+        "x": -1900,
+        "y": 400
+      },
+      "fromName": "Outside tunnels",
+      "target": {
+        "x": -1400,
+        "y": 2750
+      },
+      "targetName": "B window",
+      "stance": "stand",
+      "movement": "jump",
+      "click": "left",
+      "aim": {
+        "description": "PLACEHOLDER: record the aim point in-game."
+      },
+      "placeholder": true
+    },
+    {
+      "id": "d2-t-xbox-smoke-from-outside-long",
+      "title": "Xbox smoke",
+      "grenade": "smoke",
+      "side": "t",
+      "from": {
+        "x": 400,
+        "y": -200
+      },
+      "fromName": "Outside long",
+      "target": {
+        "x": -380,
+        "y": 1350
+      },
+      "targetName": "Xbox (mid)",
+      "stance": "stand",
+      "movement": "jump",
+      "click": "left",
+      "aim": {
+        "description": "PLACEHOLDER: record the aim point in-game."
+      },
+      "placeholder": true
+    },
+    {
+      "id": "d2-t-xbox-smoke-from-top-mid",
+      "title": "Xbox smoke",
+      "grenade": "smoke",
+      "side": "t",
+      "from": {
+        "x": -450,
+        "y": 450
+      },
+      "fromName": "Top mid",
+      "target": {
+        "x": -380,
+        "y": 1350
+      },
+      "targetName": "Xbox (mid)",
+      "stance": "stand",
+      "movement": "still",
+      "click": "left",
+      "aim": {
+        "description": "PLACEHOLDER: record the aim point in-game."
+      },
+      "placeholder": true
+    },
+    {
+      "id": "d2-t-ct-smoke-from-pit",
+      "title": "CT cross smoke",
+      "grenade": "smoke",
+      "side": "t",
+      "from": {
+        "x": 1350,
+        "y": 1200
+      },
+      "fromName": "Long A (pit side)",
+      "target": {
+        "x": 1000,
+        "y": 2300
+      },
+      "targetName": "CT spawn cross (A)",
+      "stance": "stand",
+      "movement": "still",
+      "click": "left",
+      "aim": {
+        "description": "PLACEHOLDER: record the aim point in-game."
+      },
+      "placeholder": true
+    },
+    {
+      "id": "d2-t-ct-smoke-from-outside-long",
+      "title": "CT cross smoke",
+      "grenade": "smoke",
+      "side": "t",
+      "from": {
+        "x": 400,
+        "y": -200
+      },
+      "fromName": "Outside long",
+      "target": {
+        "x": 1000,
+        "y": 2300
+      },
+      "targetName": "CT spawn cross (A)",
+      "stance": "stand",
+      "movement": "run_jump",
+      "click": "left",
+      "aim": {
+        "description": "PLACEHOLDER: record the aim point in-game."
+      },
+      "placeholder": true
+    },
+    {
+      "id": "d2-t-short-smoke-from-tspawn",
+      "title": "Short (cat) to A smoke",
+      "grenade": "smoke",
+      "side": "t",
+      "from": {
+        "x": -350,
+        "y": -820
+      },
+      "fromName": "T spawn",
+      "target": {
+        "x": 500,
+        "y": 2350
+      },
+      "targetName": "CT to A short",
+      "stance": "stand",
+      "movement": "jump",
+      "click": "left",
+      "aim": {
+        "description": "PLACEHOLDER: record the aim point in-game."
+      },
+      "placeholder": true
+    },
+    {
+      "id": "d2-t-long-corner-flash-from-outside-long",
+      "title": "Long corner flash",
+      "grenade": "flash",
+      "side": "t",
+      "from": {
+        "x": 400,
+        "y": -200
+      },
+      "fromName": "Outside long",
+      "target": {
+        "x": 1250,
+        "y": 900
+      },
+      "targetName": "Long corner",
+      "stance": "stand",
+      "movement": "jump",
+      "click": "left",
+      "aim": {
+        "description": "PLACEHOLDER: record the aim point in-game."
+      },
+      "placeholder": true
+    },
+    {
+      "id": "d2-ct-tunnel-exit-flash-from-platform",
+      "title": "Upper tunnels flash",
+      "grenade": "flash",
+      "side": "ct",
+      "from": {
+        "x": -1350,
+        "y": 2300
+      },
+      "fromName": "B platform",
+      "target": {
+        "x": -1950,
+        "y": 1500
+      },
+      "targetName": "Upper tunnels exit",
+      "stance": "stand",
+      "movement": "still",
+      "click": "left",
+      "aim": {
+        "description": "PLACEHOLDER: record the aim point in-game."
+      },
       "placeholder": true
     }
   ]

@@ -20,6 +20,9 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -50,12 +53,11 @@ import app.cs2lineups.LineupRepository
 import app.cs2lineups.core.Aim
 import app.cs2lineups.core.Grenade
 import app.cs2lineups.core.Lineup
-import app.cs2lineups.core.LineupFinder
+import app.cs2lineups.core.Target
+import app.cs2lineups.core.Targets
 import app.cs2lineups.core.LineupMatch
 import app.cs2lineups.core.Side
 import app.cs2lineups.core.WorldPos
-
-private const val SEARCH_RADIUS = 500.0
 
 private enum class Mode { BROWSE, PICK_FROM, PICK_TARGET }
 
@@ -65,7 +67,8 @@ fun LineupApp(repo: LineupRepository) {
     val map = repo.map
     var grenade by remember { mutableStateOf(Grenade.SMOKE) }
     var side by remember { mutableStateOf<Side?>(null) }
-    var tapped by remember { mutableStateOf<WorldPos?>(null) }
+    var me by remember { mutableStateOf<WorldPos?>(null) }
+    var targetId by remember { mutableStateOf<String?>(null) }
     var selected by remember { mutableStateOf<Lineup?>(null) }
     var mode by remember { mutableStateOf(Mode.BROWSE) }
     var draft by remember { mutableStateOf(emptyList<WorldPos>()) }
@@ -76,17 +79,18 @@ fun LineupApp(repo: LineupRepository) {
         if (uri != null) repo.setRadar(uri)
     }
 
-    val all = repo.allLineups
-    val searchable = map.copy(lineups = all)
-    val visible = all.filter {
+    val visible = repo.allLineups.filter {
         it.grenade == grenade && (side == null || it.side == Side.BOTH || it.side == side)
     }
-    val matches: List<LineupMatch> = tapped?.let {
-        LineupFinder.near(searchable, it, grenade, side, SEARCH_RADIUS)
-    } ?: emptyList()
+    val targets = Targets.group(visible)
+    val target = targets.firstOrNull { it.id == targetId }
+    val options = target?.let { Targets.throwOptions(it, me) } ?: emptyList()
+    val reachable: (Target) -> Boolean = { t -> me?.let { Targets.reachable(t, it) } ?: true }
 
     fun cancelAdd() { mode = Mode.BROWSE; draft = emptyList() }
-    BackHandler(enabled = mode != Mode.BROWSE) { cancelAdd() }
+    BackHandler(enabled = mode != Mode.BROWSE || target != null) {
+        if (mode != Mode.BROWSE) cancelAdd() else targetId = null
+    }
 
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(Modifier.safeDrawingPadding()) {
@@ -96,7 +100,7 @@ fun LineupApp(repo: LineupRepository) {
             ) {
                 Text(map.displayName, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
                 if (mode == Mode.BROWSE) {
-                    TextButton(onClick = { mode = Mode.PICK_FROM; draft = emptyList(); selected = null }) {
+                    TextButton(onClick = { mode = Mode.PICK_FROM; draft = emptyList(); targetId = null }) {
                         Text("+ Add lineup")
                     }
                 }
@@ -122,14 +126,14 @@ fun LineupApp(repo: LineupRepository) {
 
             ChoiceChips(
                 Grenade.entries, grenade, { it.label },
-                { grenade = it; selected = null },
+                { grenade = it; targetId = null },
                 modifier = Modifier.padding(horizontal = 12.dp),
                 dotColor = { it.color },
             )
             if (mode == Mode.BROWSE) {
                 ChoiceChips(
                     listOf<Side?>(null, Side.T, Side.CT), side, { it?.label ?: "Both sides" },
-                    { side = it; selected = null },
+                    { side = it; targetId = null },
                     modifier = Modifier.padding(horizontal = 12.dp),
                 )
             } else {
@@ -154,15 +158,16 @@ fun LineupApp(repo: LineupRepository) {
             RadarView(
                 map = map,
                 radarImage = repo.radarImage,
-                visibleLineups = visible,
-                matches = if (mode == Mode.BROWSE) matches.map { it.lineup } else emptyList(),
-                selected = selected,
-                tapped = if (mode == Mode.BROWSE) tapped else null,
-                searchRadius = SEARCH_RADIUS,
+                targets = if (mode == Mode.BROWSE) targets else emptyList(),
+                reachable = reachable,
+                selectedTarget = if (mode == Mode.BROWSE) target else null,
+                options = if (mode == Mode.BROWSE) options.map { it.lineup } else emptyList(),
+                me = if (mode == Mode.BROWSE) me else null,
+                picking = mode != Mode.BROWSE,
                 draft = draft,
-                onTap = { p ->
+                onMapTap = { p ->
                     when (mode) {
-                        Mode.BROWSE -> { tapped = p; selected = null }
+                        Mode.BROWSE -> { me = p; targetId = null }
                         Mode.PICK_FROM -> { draft = listOf(p); mode = Mode.PICK_TARGET }
                         Mode.PICK_TARGET -> {
                             editing = Lineup(
@@ -180,17 +185,22 @@ fun LineupApp(repo: LineupRepository) {
                         }
                     }
                 },
+                onTargetTap = { targetId = it.id },
+                onOptionTap = { selected = it },
                 modifier = Modifier.padding(top = 4.dp),
             )
 
-            ResultList(
-                tapped = tapped,
-                grenade = grenade,
-                matches = matches,
-                isMine = repo::isUserLineup,
-                onSelect = { selected = it },
-                modifier = Modifier.weight(1f),
-            )
+            if (target != null) {
+                ThrowOptions(target, options, me != null, onSelect = { selected = it }, onBack = { targetId = null }, modifier = Modifier.weight(1f))
+            } else {
+                TargetList(
+                    grenade = grenade,
+                    targets = targets,
+                    me = me,
+                    onSelect = { targetId = it.id },
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
 
@@ -216,13 +226,14 @@ fun LineupApp(repo: LineupRepository) {
                 initial = lineup,
                 importImage = repo::importScreenshot,
                 loadImage = repo::loadImage,
-                onSave = {
-                    repo.save(it)
+                onSave = { saved ->
+                    repo.save(saved)
                     editing = null
                     cancelAdd()
-                    grenade = it.grenade
-                    tapped = it.from
-                    selected = it
+                    grenade = saved.grenade
+                    targetId = Targets.group(repo.allLineups.filter { it.grenade == saved.grenade })
+                        .firstOrNull { t -> t.lineups.any { it.id == saved.id } }?.id
+                    selected = saved
                 },
                 onCancel = { editing = null; cancelAdd() },
             )
@@ -230,27 +241,88 @@ fun LineupApp(repo: LineupRepository) {
     }
 }
 
+/** Landing spots for the current grenade; reachable ones first when your position is set. */
 @Composable
-private fun ResultList(
-    tapped: WorldPos?,
+private fun TargetList(
     grenade: Grenade,
-    matches: List<LineupMatch>,
-    isMine: (Lineup) -> Boolean,
-    onSelect: (Lineup) -> Unit,
+    targets: List<Target>,
+    me: WorldPos?,
+    onSelect: (Target) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (tapped == null || matches.isEmpty()) {
-        Box(modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.TopCenter) {
-            Text(
-                if (tapped == null) "Tap where you're standing on the map to see ${grenade.label.lowercase()} lineups from there."
-                else "No ${grenade.label.lowercase()} lineups near there yet. The faint dots show where they are, or use + Add lineup.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+    val g = grenade.label.lowercase()
+    if (targets.isEmpty()) {
+        Hint("No $g lineups yet. Use + Add lineup to record one.", modifier)
         return
     }
+    val rows = targets
+        .map { t -> t to (me?.let { m -> t.lineups.minOf { it.from.distanceTo(m) } }) }
+        .sortedBy { it.second ?: 0.0 }
     LazyColumn(modifier.fillMaxWidth()) {
-        items(matches, key = { it.lineup.id }) { m ->
+        item {
+            Text(
+                if (me == null) "Tap a $g icon on the map for where you want it to land. Tap the map to mark where you are."
+                else "Faded icons can't be reached from near you. Tap an icon to see where to throw from.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            )
+        }
+        items(rows, key = { it.first.id }) { (t, d) ->
+            val reachable = me == null || Targets.reachable(t, me)
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { onSelect(t) }
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Dot(t.grenade.color.copy(alpha = if (reachable) 1f else 0.35f))
+                Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                    Text(t.name, fontWeight = FontWeight.SemiBold, color = if (reachable) Color.Unspecified else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        "${t.lineups.size} throw spot${if (t.lineups.size == 1) "" else "s"}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                d?.let {
+                    Text("nearest ${it.toInt()} u", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            HorizontalDivider()
+        }
+    }
+}
+
+/** Where you can throw to reach one landing spot, numbered like the map markers. */
+@Composable
+private fun ThrowOptions(
+    target: Target,
+    options: List<LineupMatch>,
+    hasMe: Boolean,
+    onSelect: (Lineup) -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(modifier.fillMaxWidth()) {
+        item {
+            Row(
+                Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("${target.grenade.label} ${target.name}", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Pick where to throw from",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                TextButton(onClick = onBack) { Text("All spots") }
+            }
+        }
+        itemsIndexed(options, key = { _, m -> m.lineup.id }) { i, m ->
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -258,29 +330,33 @@ private fun ResultList(
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Dot(m.lineup.grenade.color)
+                Box(
+                    Modifier.size(24.dp).background(Color.White, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) { Text("${i + 1}", color = Color.Black, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium) }
                 Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                    Text(m.lineup.title, fontWeight = FontWeight.SemiBold)
+                    Text(m.lineup.fromName, fontWeight = FontWeight.SemiBold)
                     Text(
-                        "${m.lineup.fromName} → ${m.lineup.targetName} · ${m.lineup.movement.label}",
+                        "${m.lineup.stance.label} · ${m.lineup.movement.label} · ${m.lineup.click.label.substringBefore(" (")}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        "${m.distance.toInt()} u away",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    when {
-                        isMine(m.lineup) -> Text("Mine", style = MaterialTheme.typography.labelSmall, color = Color.Cyan)
-                        m.lineup.placeholder -> Text("Placeholder", style = MaterialTheme.typography.labelSmall, color = Color(0xFFFFB74D))
-                    }
+                    if (hasMe) Text("${m.distance.toInt()} u away", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (m.lineup.placeholder) Text("Placeholder", style = MaterialTheme.typography.labelSmall, color = Color(0xFFFFB74D))
+                    else if (m.lineup.id.startsWith("user-")) Text("Mine", style = MaterialTheme.typography.labelSmall, color = Color.Cyan)
                 }
             }
             HorizontalDivider()
         }
+    }
+}
+
+@Composable
+private fun Hint(text: String, modifier: Modifier = Modifier) {
+    Box(modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.TopCenter) {
+        Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

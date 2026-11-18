@@ -15,6 +15,15 @@ val Grenade.label: String
         Grenade.MOLOTOV -> "Molotov"
     }
 
+/** One letter for the map icon. */
+val Grenade.letter: String
+    get() = when (this) {
+        Grenade.SMOKE -> "S"
+        Grenade.FLASH -> "F"
+        Grenade.HE -> "H"
+        Grenade.MOLOTOV -> "M"
+    }
+
 val Grenade.color: Color
     get() = when (this) {
         Grenade.SMOKE -> Color(0xFFB0BEC5)
