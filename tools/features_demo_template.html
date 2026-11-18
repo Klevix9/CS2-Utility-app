@@ -1,0 +1,80 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CS2 Utility: new features demo</title>
+<style>
+:root{--bg:#101010;--fg:#eee;--mut:#9a9a9a;--pri:#f0b429;--line:#2c2c2c;--warn:#f0b429}
+*{box-sizing:border-box}body{margin:0;background:#050505;color:var(--fg);font:15px system-ui,sans-serif;display:flex;justify-content:center}
+#app{width:100%;max-width:420px;min-height:100vh;background:var(--bg);padding:12px 14px 24px}
+h1{margin:0 0 8px;font-size:22px}.row{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.chip{border:1px solid #444;background:none;color:var(--fg);border-radius:10px;padding:6px 12px;font:inherit;cursor:pointer}
+.chip.on{background:#173a38;border-color:#173a38;color:#9ff}
+input{width:100%;padding:10px;border-radius:8px;border:1px solid #444;background:#181818;color:var(--fg);font:inherit}
+.wrap{position:relative}canvas{width:100%;aspect-ratio:1;display:block;border-radius:8px;background:#0b0b0b}
+.lvl{position:absolute;top:6px;right:6px;display:flex;gap:4px}.lvl .chip{background:#000a;padding:4px 10px}.lvl .chip.on{background:#173a38}
+.item{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line);cursor:pointer}.item .s{color:var(--mut);font-size:13px}
+.dot{width:12px;height:12px;border-radius:50%;margin-top:5px;flex:none}.hint{color:var(--mut);margin:10px 0}
+.warn{color:var(--warn);background:#f0b4291a;padding:10px;border-radius:8px;font-size:13px}
+.step{display:flex;gap:12px;margin:12px 0}.n{width:28px;height:28px;border-radius:50%;background:#173a38;color:#9ff;display:grid;place-items:center;font-weight:700;flex:none}
+.step .d{color:var(--mut);font-size:14px}button.btn{background:var(--pri);color:#000;border:0;border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer}
+.star{background:none;border:0;color:var(--pri);font-size:26px;cursor:pointer}.hd{display:flex;justify-content:space-between;align-items:center}
+.lnk{color:var(--pri);background:none;border:0;font:inherit;cursor:pointer;padding:0}
+code{background:#222;padding:2px 5px;border-radius:4px;font-size:12px;word-break:break-all}
+</style></head><body><div id="app"></div>
+<script>
+const MAPS=__MAPS__;
+const COL={smoke:'#B0BEC5',flash:'#FFEB3B',he:'#EF5350',molotov:'#FF9800'},LBL={smoke:'Smoke',flash:'Flash',he:'HE',molotov:'Molotov'};
+function loadFav(){try{return JSON.parse(localStorage.getItem('fav')||'[]')}catch(e){return[]}}
+let st={map:'de_dust2',q:'',gr:new Set(['smoke']),side:null,favOnly:false,level:'upper',sel:null,fav:new Set(loadFav())};
+const imgs={};function img(src){if(!imgs[src]){const i=new Image();i.onload=render;i.src=src;imgs[src]=i}return imgs[src]}
+const M=()=>MAPS[st.map];
+const proj=(p,r)=>[(p.x-r.posX)/r.scale/r.sizePx,(r.posY-p.y)/r.scale/r.sizePx];
+const lvl=l=>{const r=M().radar;return r.lowerBelowZ!=null&&l.fromZ!=null&&l.fromZ<r.lowerBelowZ?'lower':'upper'};
+function visible(){const words=st.q.toLowerCase().split(/\s+/).filter(Boolean);
+ return M().lineups.filter(l=>{
+  if(st.gr.size&&!st.gr.has(l.grenade))return false;
+  if(st.side&&l.side!=='both'&&l.side!==st.side)return false;
+  if(st.favOnly&&!st.fav.has(l.id))return false;
+  const h=[l.title,l.fromName,l.targetName,l.aim.description,l.notes,l.grenade].join(' ').toLowerCase();
+  return words.every(w=>h.includes(w))})}
+const fmt=v=>Number.isInteger(v)?String(v):v.toFixed(2);
+function steps(l){const a=l.aim,out=[];const low=M().radar.lowerImage&&lvl(l)==='lower';
+ const cmd=(l.fromZ!=null&&a.pitch!=null&&a.yaw!=null)?`setpos ${fmt(l.from.x)} ${fmt(l.from.y)} ${fmt(l.fromZ)};setang ${fmt(a.pitch)} ${fmt(a.yaw)} 0`:null;
+ out.push(['Go to '+l.fromName+(low?' (lower level)':''),cmd,cmd]);
+ out.push([l.stance==='crouch'?'Crouch':'Stand','Aim: '+a.description+(a.pitch!=null&&a.yaw!=null?` (pitch ${fmt(a.pitch)}, yaw ${fmt(a.yaw)})`:'')]);
+ out.push([{still:'Stand still',jump:'Jump throw',run:'Run throw',walk:'Walk throw',run_jump:'Run + jump throw'}[l.movement],{left:'Left click (full throw)',right:'Right click (short lob)',both:'Both buttons (medium)'}[l.click]]);
+ if(l.notes)out.push(['Tip',l.notes]);return out}
+function chips(items,on,fn){return items.map(([k,t])=>`<button class="chip ${on(k)?'on':''}" onclick="${fn}('${k}')">${t}</button>`).join('')}
+function render(){const m=M(),r=m.radar,list=visible(),sel=list.find(l=>l.id===st.sel);
+ const hasLow=!!r.lowerImage;
+ document.getElementById('app').innerHTML=`<h1>CS2 Utility <small style="color:var(--mut);font-size:12px">new features demo</small></h1>
+ <div class="row">${chips([['de_dust2','Dust II'],['de_nuke','Nuke']],k=>k===st.map,'setMap')}</div>
+ <input placeholder="Search lineups (e.g. xbox smoke)" value="${st.q.replace(/"/g,'&quot;')}" oninput="st.q=this.value;st.sel=null;render2()" id="q">
+ <div class="row">${chips(Object.keys(LBL).map(k=>[k,LBL[k]]),k=>st.gr.has(k),'togGr')}</div>
+ <div class="row">${chips([['t','T'],['ct','CT']],k=>st.side===k,'setSide')}<button class="chip ${st.favOnly?'on':''}" onclick="st.favOnly=!st.favOnly;render()">★ Favourites only</button></div>
+ <div class="wrap"><canvas id="c" width="900" height="900"></canvas>${hasLow?`<div class="lvl">${chips([['upper','Upper'],['lower','Lower']],k=>st.level===k,'setLvl')}</div>`:''}</div>
+ <div id="below"></div>`;
+ draw();below(list,sel)}
+function render2(){const list=visible(),sel=list.find(l=>l.id===st.sel);draw();below(list,sel)}
+function below(list,sel){const el=document.getElementById('below');
+ if(sel){el.innerHTML=`<div class="hd"><h2 style="margin:12px 0">${sel.title}</h2><button class="star" onclick="fav('${sel.id}')">${st.fav.has(sel.id)?'★':'☆'}</button></div>
+ <div style="color:var(--mut)">${LBL[sel.grenade].toUpperCase()} · ${sel.side.toUpperCase()} SIDE · From ${sel.fromName} to ${sel.targetName}</div>
+ ${sel.placeholder?'<p class="warn">Not recorded yet. The spot is approximate and there is no aim point.</p>':''}
+ ${sel.demo?'<p class="warn">Demo-only sample for this page. Not part of the real map data.</p>':''}
+ ${steps(sel).map((s,i)=>`<div class="step"><div class="n">${i+1}</div><div><b>${s[0]}</b>${s[1]?`<div class="d">${s[2]?'Practice server: <code>'+s[1]+'</code> <button class="lnk" onclick="navigator.clipboard&&navigator.clipboard.writeText(\`${s[1]}\`);this.textContent=\'Copied\'">Copy command</button>':s[1]}</div>`:''}</div></div>`).join('')}
+ <button class="lnk" onclick="st.sel=null;render()">← Back to list</button>`;return}
+ el.innerHTML=(list.length?`<div class="hint">${list.length} lineup${list.length>1?'s':''} · tap one</div>`:`<div class="hint">No lineups match your search or filters${M().lineups.length?'':' (this map has no lineups yet)'}.</div>`)+
+ list.slice(0,40).map(l=>`<div class="item" onclick="st.sel='${l.id}';render()"><div class="dot" style="background:${COL[l.grenade]}"></div><div><b>${st.fav.has(l.id)?'★ ':''}${l.title}</b><div class="s">${l.fromName} → ${l.targetName}${l.placeholder?' · <span style="color:var(--warn)">Unrecorded</span>':''}${l.demo?' · demo':''}${M().radar.lowerImage?' · '+lvl(l)+' level':''}</div></div></div>`).join('')}
+function draw(){const c=document.getElementById('c'),g=c.getContext('2d'),r=M().radar,W=c.width;g.clearRect(0,0,W,W);
+ const src=(st.level==='lower'&&r.lowerImageData)?r.lowerImageData:r.imageData;const im=img(src);if(im.complete)g.drawImage(im,0,0,W,W);
+ const list=visible();for(const l of list){if(r.lowerImage&&lvl(l)!==st.level)continue;
+  const[tu,tv]=proj(l.target,r),[fu,fv]=proj(l.from,r),sel=l.id===st.sel;
+  if(sel){g.strokeStyle='#fff';g.setLineDash([8,6]);g.lineWidth=3;g.beginPath();g.moveTo(fu*W,fv*W);g.lineTo(tu*W,tv*W);g.stroke();g.setLineDash([])}
+  g.fillStyle=COL[l.grenade];g.globalAlpha=l.placeholder?.65:1;g.beginPath();g.arc(tu*W,tv*W,sel?15:11,0,7);g.fill();g.globalAlpha=1;
+  g.fillStyle='#000';g.font='bold 14px sans-serif';g.textAlign='center';g.fillText(LBL[l.grenade][0],tu*W,tv*W+5);
+  if(sel){g.fillStyle='#fff';g.beginPath();g.arc(fu*W,fv*W,9,0,7);g.fill()}}}
+function setMap(k){st.map=k;st.sel=null;st.level='upper';st.q='';render()}
+function togGr(k){st.gr.has(k)?st.gr.delete(k):st.gr.add(k);st.sel=null;render()}
+function setSide(k){st.side=st.side===k?null:k;st.sel=null;render()}
+function setLvl(k){st.level=k;st.sel=null;render()}
+function fav(id){st.fav.has(id)?st.fav.delete(id):st.fav.add(id);try{localStorage.setItem('fav',JSON.stringify([...st.fav]))}catch(e){}render()}
+render();
+</script></body></html>

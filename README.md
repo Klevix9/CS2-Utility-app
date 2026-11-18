@@ -2,7 +2,7 @@
 
 An Android app for CS2 grenade lineups. Pick a grenade, tap where you're standing on the radar, and see the lineups you can throw from there: where to aim, stance, movement and which click, plus an optional aim screenshot.
 
-Dust2 only for now. The lineup data and logic are kept apart from the Android UI so a desktop companion can reuse them later.
+Maps: Dust II, Mirage, Inferno, Nuke, Ancient, Anubis and Cache (the CS2 Premier pool, which FACEIT's pool also contains). Switch maps by tapping the map name. Every map ships with Valve's CS2 radar image. Only Dust II has placeholder lineups so far; the others start empty, so record your own lineups. The lineup data and logic are kept apart from the Android UI so a desktop companion can reuse them later.
 
 ## Install
 
@@ -17,7 +17,7 @@ To build yourself, open the folder in Android Studio and run the `app` configura
 3. Tap the spot you want. Its throw positions appear as numbered markers and in a list, closest first.
 4. Tap a throw position for step-by-step instructions: where to stand, where to aim, how to throw.
 
-**The map** is an original, simplified drawing of Dust II (Valve's radar art isn't bundled). If you prefer the real radar, use **⋮ → Use my own radar image…** and pick a square, north-up image.
+**The map** is Valve's CS2 radar image from `data/radars/<id>.png` (© Valve, sourced from the [MurkyYT/cs2-map-icons](https://github.com/MurkyYT/cs2-map-icons) mirror) when present; otherwise the app falls back to an original, simplified drawing (Dust II only). To use a different radar, pick a square, north-up image with **⋮ → Use my own radar image…**; it overrides both.
 
 **Recording lineups:** bundled lineups start out as *unrecorded* placeholders: the spot is approximate and there's no aim point. On a practice server, stand at the spot, line up the throw, type `getpos` in the console, then open the lineup in the app and tap **Record this lineup**. Paste the `getpos` output, describe the aim point and attach a screenshot. You can also record a brand-new one with **+ Add lineup**. Hide the placeholders with **⋮ → Show unrecorded lineups**.
 
@@ -40,7 +40,8 @@ It rebuilds the drawn map and placeholder list and drops every placeholder that 
 | `core/` | Plain Kotlin: lineup model, JSON parsing and validation, world ↔ radar conversion, nearest-lineup search, `getpos` parser. No Android code, so a desktop app can use it. |
 | `app/` | Android app (Jetpack Compose). |
 | `data/maps/<map>.json` | Lineups for one map, plus its radar parameters. |
-| `data/radars/`, `data/images/` | Optional bundled radar images and aim screenshots. |
+| `data/radars/<id>.png` | Valve's CS2 radar images (© Valve, from the MurkyYT/cs2-map-icons mirror). |
+| `data/images/` | Optional aim screenshots. |
 | `tools/build_dust2.py` | Generates the drawn Dust II map and the placeholder lineup spots. |
 | `docs/` | Release steps, privacy policy and store listing. |
 

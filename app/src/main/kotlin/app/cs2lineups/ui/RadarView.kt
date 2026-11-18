@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import app.cs2lineups.core.Area
 import app.cs2lineups.core.Grenade
 import app.cs2lineups.core.Layout
+import app.cs2lineups.core.Level
 import app.cs2lineups.core.Lineup
 import app.cs2lineups.core.MapData
 import app.cs2lineups.core.RadarProjection
@@ -47,6 +48,7 @@ import app.cs2lineups.core.WorldPos
  * [me] can reach it). With a [selectedTarget], its throw spots show as
  * numbered markers with dashed lines to where the grenade lands.
  * Adding a lineup ([picking] = true): every tap is a map position.
+ * On multi-level maps, [level] limits markers to throw spots on that level.
  */
 @Composable
 fun RadarView(
@@ -63,11 +65,15 @@ fun RadarView(
     onTargetTap: (Target) -> Unit,
     onOptionTap: (Lineup) -> Unit,
     modifier: Modifier = Modifier,
+    level: Level? = null,
 ) {
     val proj = RadarProjection(map.radar)
+    val onLevel: (Lineup) -> Boolean = { l -> level == null || l.fromLevel(map.radar) == level }
+    val shownTargets = targets.filter { t -> t.lineups.any(onLevel) }
+    val shownOptions = options.filter(onLevel)
     val textMeasurer = rememberTextMeasurer()
     val state by rememberUpdatedState(
-        TapState(targets, selectedTarget, options, picking, onMapTap, onTargetTap, onOptionTap)
+        TapState(shownTargets, selectedTarget, shownOptions, picking, onMapTap, onTargetTap, onOptionTap)
     )
 
     Box(
@@ -121,7 +127,7 @@ fun RadarView(
                 drawCircle(Color.Black, 6.dp.toPx(), at(it), style = Stroke(1.5.dp.toPx()))
             }
 
-            for (t in targets) {
+            for (t in shownTargets) {
                 if (t.id == selectedTarget?.id) continue
                 val alpha = if (selectedTarget != null) 0.25f else if (reachable(t)) 1f else 0.3f
                 drawGrenadeIcon(textMeasurer, t.grenade, at(t.pos), alpha)
@@ -129,7 +135,9 @@ fun RadarView(
 
             selectedTarget?.let { t ->
                 val c = t.grenade.color
+                // Keep the list numbering; just skip spots on the other level.
                 options.forEachIndexed { i, l ->
+                    if (!onLevel(l)) return@forEachIndexed
                     drawLine(
                         c.copy(alpha = 0.8f), at(l.from), at(t.pos), strokeWidth = 2.dp.toPx(),
                         pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 8f)),
@@ -152,7 +160,7 @@ fun RadarView(
         }
         if (radarImage == null && map.layout == null) {
             Text(
-                "No radar image yet: ⋮ → Set radar image",
+                "No radar bundled for this map: ⋮ → Use my own radar image…",
                 style = MaterialTheme.typography.labelSmall,
                 color = Color.White.copy(alpha = 0.6f),
                 modifier = Modifier.align(Alignment.BottomCenter).padding(8.dp),

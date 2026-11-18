@@ -27,6 +27,7 @@ fun <T> ChoiceChips(
     onSelect: (T) -> Unit,
     modifier: Modifier = Modifier,
     dotColor: ((T) -> Color)? = null,
+    trailing: @Composable () -> Unit = {},
 ) {
     Row(
         modifier.horizontalScroll(rememberScrollState()),
@@ -36,6 +37,32 @@ fun <T> ChoiceChips(
             FilterChip(
                 selected = o == selected,
                 onClick = { onSelect(o) },
+                label = { Text(label(o)) },
+                leadingIcon = dotColor?.let { c -> { Dot(c(o)) } },
+            )
+        }
+        trailing()
+    }
+}
+
+/** A horizontally scrolling row of multi-choice chips. Nothing selected means "all". */
+@Composable
+fun <T> MultiChoiceChips(
+    options: List<T>,
+    selected: Set<T>,
+    label: (T) -> String,
+    onChange: (Set<T>) -> Unit,
+    modifier: Modifier = Modifier,
+    dotColor: ((T) -> Color)? = null,
+) {
+    Row(
+        modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        options.forEach { o ->
+            FilterChip(
+                selected = o in selected,
+                onClick = { onChange(if (o in selected) selected - o else selected + o) },
                 label = { Text(label(o)) },
                 leadingIcon = dotColor?.let { c -> { Dot(c(o)) } },
             )

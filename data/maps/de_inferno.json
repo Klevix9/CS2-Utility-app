@@ -1,0 +1,12 @@
+{
+  "id": "de_inferno",
+  "displayName": "Inferno",
+  "radar": {
+    "image": "radars/de_inferno.png",
+    "posX": -2087,
+    "posY": 3870,
+    "scale": 4.9,
+    "sizePx": 1024
+  },
+  "lineups": []
+}

@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import app.cs2lineups.core.Favourites
 import app.cs2lineups.core.Lineup
 import app.cs2lineups.core.LineupExchange
 import app.cs2lineups.core.RadarProjection
@@ -43,6 +44,9 @@ class LineupRepository(private val context: Context, mapId: String) {
     var radarImage by mutableStateOf(loadRadar())
         private set
 
+    /** Bundled radar for the lower level (e.g. Nuke), if the map has one. */
+    val lowerRadarImage: ImageBitmap? = map.radar.lowerImage?.let { loadImage(it) }
+
     private val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
 
     /** Whether to show bundled lineups that haven't been recorded in-game yet. */
@@ -52,6 +56,17 @@ class LineupRepository(private val context: Context, mapId: String) {
     fun changeShowUnrecorded(show: Boolean) {
         showUnrecorded = show
         prefs.edit().putBoolean("showUnrecorded", show).apply()
+    }
+
+    private val favouritesKey = "fav_${map.id}"
+
+    /** Ids of the player's starred lineups on this map. */
+    var favourites by mutableStateOf(Favourites.decode(prefs.getString(favouritesKey, null)))
+        private set
+
+    fun toggleFavourite(id: String) {
+        favourites = Favourites.toggle(favourites, id)
+        prefs.edit().putString(favouritesKey, Favourites.encode(favourites)).apply()
     }
 
     val allLineups: List<Lineup>
@@ -99,6 +114,7 @@ class LineupRepository(private val context: Context, mapId: String) {
 
     fun delete(lineup: Lineup) {
         userLineups.removeAll { it.id == lineup.id }
+        if (lineup.id in favourites) toggleFavourite(lineup.id)
         lineup.image?.takeIf { it.startsWith(USER_PREFIX) }?.let { userImageFile(it).delete() }
         persist()
     }

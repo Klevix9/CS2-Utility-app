@@ -27,6 +27,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.rememberCoroutineScope
@@ -54,12 +56,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.cs2lineups.LineupRepository
 import app.cs2lineups.core.Aim
 import app.cs2lineups.core.Grenade
+import app.cs2lineups.core.Level
 import app.cs2lineups.core.Lineup
+import app.cs2lineups.core.LineupFilter
+import app.cs2lineups.core.LineupSteps
+import app.cs2lineups.core.Radar
 import app.cs2lineups.core.Target
 import app.cs2lineups.core.Targets
 import app.cs2lineups.core.LineupMatch
@@ -70,10 +78,13 @@ private enum class Mode { BROWSE, PICK_FROM, PICK_TARGET }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LineupApp(repo: LineupRepository) {
+fun LineupApp(repo: LineupRepository, maps: List<Pair<String, String>>, onSwitchMap: (String) -> Unit) {
     val map = repo.map
-    var grenade by remember { mutableStateOf(Grenade.SMOKE) }
+    var grenades by remember { mutableStateOf(setOf(Grenade.SMOKE)) }
     var side by remember { mutableStateOf<Side?>(null) }
+    var query by remember { mutableStateOf("") }
+    var favouritesOnly by remember { mutableStateOf(false) }
+    var level by remember { mutableStateOf(Level.UPPER) }
     var me by remember { mutableStateOf<WorldPos?>(null) }
     var targetId by remember { mutableStateOf<String?>(null) }
     var selected by remember { mutableStateOf<Lineup?>(null) }
@@ -81,6 +92,7 @@ fun LineupApp(repo: LineupRepository) {
     var draft by remember { mutableStateOf(emptyList<WorldPos>()) }
     var editing by remember { mutableStateOf<Lineup?>(null) }
     var menuOpen by remember { mutableStateOf(false) }
+    var mapMenuOpen by remember { mutableStateOf(false) }
 
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -96,13 +108,14 @@ fun LineupApp(repo: LineupRepository) {
     }
     val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) runCatching { repo.importFrom(uri) }
-            .onSuccess { toast(if (it == 0) "No Dust II lineups in that file" else "Imported $it lineup${if (it == 1) "" else "s"}") }
+            .onSuccess { toast(if (it == 0) "No ${map.displayName} lineups in that file" else "Imported $it lineup${if (it == 1) "" else "s"}") }
             .onFailure { toast("That file isn't a lineup export.") }
     }
 
-    val visible = repo.allLineups.filter {
-        it.grenade == grenade && (side == null || it.side == Side.BOTH || it.side == side)
-    }
+    // Grenade type for a new lineup: the only selected one, else smoke.
+    val grenade = grenades.singleOrNull() ?: Grenade.SMOKE
+    val filter = LineupFilter(query = query, grenades = grenades, side = side, favouritesOnly = favouritesOnly)
+    val visible = filter.apply(repo.allLineups, repo.favourites)
     val targets = Targets.group(visible)
     val target = targets.firstOrNull { it.id == targetId }
     val options = target?.let { Targets.throwOptions(it, me) } ?: emptyList()
@@ -123,7 +136,18 @@ fun LineupApp(repo: LineupRepository) {
             ) {
                 Column(Modifier.weight(1f)) {
                     Text("CS2 UTILITY", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, letterSpacing = 1.5.sp)
-                    Text(map.displayName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    Box {
+                        Text(
+                            map.displayName + " ▾", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.clickable { mapMenuOpen = true },
+                        )
+                        DropdownMenu(expanded = mapMenuOpen, onDismissRequest = { mapMenuOpen = false }) {
+                            for ((id, name) in maps) DropdownMenuItem(
+                                text = { Text(name) },
+                                onClick = { mapMenuOpen = false; if (id != map.id) onSwitchMap(id) },
+                            )
+                        }
+                    }
                 }
                 if (mode == Mode.BROWSE) {
                     TextButton(onClick = { mode = Mode.PICK_FROM; draft = emptyList(); targetId = null }) {
@@ -142,7 +166,7 @@ fun LineupApp(repo: LineupRepository) {
                         DropdownMenuItem(
                             text = { Text("Export my lineups…") },
                             enabled = repo.userLineups.isNotEmpty(),
-                            onClick = { menuOpen = false; exporter.launch("dust2-lineups.json") },
+                            onClick = { menuOpen = false; exporter.launch("${map.id.removePrefix("de_")}-lineups.json") },
                         )
                         DropdownMenuItem(
                             text = { Text("Import lineups…") },
@@ -166,19 +190,37 @@ fun LineupApp(repo: LineupRepository) {
                 }
             }
 
-            ChoiceChips(
-                Grenade.entries, grenade, { it.label },
-                { grenade = it; targetId = null },
-                modifier = Modifier.padding(horizontal = 12.dp),
-                dotColor = { it.color },
-            )
             if (mode == Mode.BROWSE) {
+                OutlinedTextField(
+                    query, { query = it; targetId = null },
+                    placeholder = { Text("Search lineups") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                )
+                MultiChoiceChips(
+                    Grenade.entries, grenades, { it.label },
+                    { grenades = it; targetId = null },
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    dotColor = { it.color },
+                )
                 ChoiceChips(
                     listOf<Side?>(null, Side.T, Side.CT), side, { it?.label ?: "Both sides" },
                     { side = it; targetId = null },
                     modifier = Modifier.padding(horizontal = 12.dp),
-                )
+                ) {
+                    FilterChip(
+                        selected = favouritesOnly,
+                        onClick = { favouritesOnly = !favouritesOnly; targetId = null },
+                        label = { Text("★ Favourites only") },
+                    )
+                }
             } else {
+                ChoiceChips(
+                    Grenade.entries, grenade, { it.label },
+                    { grenades = setOf(it) },
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    dotColor = { it.color },
+                )
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -197,46 +239,63 @@ fun LineupApp(repo: LineupRepository) {
                 }
             }
 
-            RadarView(
-                map = map,
-                radarImage = repo.radarImage,
-                targets = if (mode == Mode.BROWSE) targets else emptyList(),
-                reachable = reachable,
-                selectedTarget = if (mode == Mode.BROWSE) target else null,
-                options = if (mode == Mode.BROWSE) options.map { it.lineup } else emptyList(),
-                me = if (mode == Mode.BROWSE) me else null,
-                picking = mode != Mode.BROWSE,
-                draft = draft,
-                onMapTap = { p ->
-                    when (mode) {
-                        Mode.BROWSE -> { me = p; targetId = null }
-                        Mode.PICK_FROM -> { draft = listOf(p); mode = Mode.PICK_TARGET }
-                        Mode.PICK_TARGET -> {
-                            editing = Lineup(
-                                id = repo.newId(),
-                                title = "",
-                                grenade = grenade,
-                                side = side ?: Side.T,
-                                from = draft[0],
-                                fromName = "",
-                                target = p,
-                                targetName = "",
-                                aim = Aim(""),
-                            )
-                            draft = draft + p
+            val hasLower = map.radar.hasLowerLevel
+            val shownLevel = if (hasLower) level else Level.UPPER
+            Box(Modifier.padding(top = 4.dp)) {
+                RadarView(
+                    map = map,
+                    radarImage = if (shownLevel == Level.LOWER) repo.lowerRadarImage ?: repo.radarImage else repo.radarImage,
+                    targets = if (mode == Mode.BROWSE) targets else emptyList(),
+                    reachable = reachable,
+                    selectedTarget = if (mode == Mode.BROWSE) target else null,
+                    options = if (mode == Mode.BROWSE) options.map { it.lineup } else emptyList(),
+                    me = if (mode == Mode.BROWSE) me else null,
+                    picking = mode != Mode.BROWSE,
+                    draft = draft,
+                    onMapTap = { p ->
+                        when (mode) {
+                            Mode.BROWSE -> { me = p; targetId = null }
+                            Mode.PICK_FROM -> { draft = listOf(p); mode = Mode.PICK_TARGET }
+                            Mode.PICK_TARGET -> {
+                                editing = Lineup(
+                                    id = repo.newId(),
+                                    title = "",
+                                    grenade = grenade,
+                                    side = side ?: Side.T,
+                                    from = draft[0],
+                                    fromName = "",
+                                    target = p,
+                                    targetName = "",
+                                    aim = Aim(""),
+                                )
+                                draft = draft + p
+                            }
                         }
-                    }
-                },
-                onTargetTap = { targetId = it.id },
-                onOptionTap = { selected = it },
-                modifier = Modifier.padding(top = 4.dp),
-            )
+                    },
+                    onTargetTap = { targetId = it.id },
+                    onOptionTap = { selected = it },
+                    level = if (hasLower && mode == Mode.BROWSE) shownLevel else null,
+                )
+                if (hasLower) {
+                    ChoiceChips(
+                        listOf(Level.UPPER, Level.LOWER), shownLevel,
+                        { if (it == Level.UPPER) "Upper" else "Lower" },
+                        { level = it },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f), MaterialTheme.shapes.small)
+                            .padding(horizontal = 6.dp),
+                    )
+                }
+            }
 
             if (target != null) {
                 ThrowOptions(target, options, me != null, onSelect = { selected = it }, onBack = { targetId = null }, modifier = Modifier.weight(1f))
             } else {
                 TargetList(
-                    grenade = grenade,
+                    g = grenades.singleOrNull()?.label?.lowercase() ?: "grenade",
+                    filtered = !filter.copy(grenades = emptySet()).isDefault,
                     targets = targets,
                     me = me,
                     onSelect = { targetId = it.id },
@@ -252,6 +311,9 @@ fun LineupApp(repo: LineupRepository) {
             LineupDetail(
                 l = lineup,
                 loadImage = repo::loadImage,
+                radar = map.radar,
+                favourite = lineup.id in repo.favourites,
+                onToggleFavourite = { repo.toggleFavourite(lineup.id) },
                 mine = repo.isUserLineup(lineup),
                 onEdit = { selected = null; editing = lineup },
                 onDelete = { repo.delete(lineup); selected = null },
@@ -279,8 +341,8 @@ fun LineupApp(repo: LineupRepository) {
                     repo.save(saved)
                     editing = null
                     cancelAdd()
-                    grenade = saved.grenade
-                    targetId = Targets.group(repo.allLineups.filter { it.grenade == saved.grenade })
+                    if (grenades.isNotEmpty() && saved.grenade !in grenades) grenades = grenades + saved.grenade
+                    targetId = Targets.group(filter.copy(grenades = grenades).apply(repo.allLineups, repo.favourites))
                         .firstOrNull { t -> t.lineups.any { it.id == saved.id } }?.id
                     selected = saved
                 },
@@ -293,15 +355,19 @@ fun LineupApp(repo: LineupRepository) {
 /** Landing spots for the current grenade; reachable ones first when your position is set. */
 @Composable
 private fun TargetList(
-    grenade: Grenade,
+    g: String,
+    filtered: Boolean,
     targets: List<Target>,
     me: WorldPos?,
     onSelect: (Target) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val g = grenade.label.lowercase()
     if (targets.isEmpty()) {
-        Hint("No $g lineups yet. Use + Add lineup to record one.", modifier)
+        Hint(
+            if (filtered) "No $g lineups match your search or filters."
+            else "No $g lineups yet. Use + Add lineup to record one.",
+            modifier,
+        )
         return
     }
     val rows = targets
@@ -413,6 +479,9 @@ private fun Hint(text: String, modifier: Modifier = Modifier) {
 private fun LineupDetail(
     l: Lineup,
     loadImage: (String) -> ImageBitmap?,
+    radar: Radar,
+    favourite: Boolean,
+    onToggleFavourite: () -> Unit,
     mine: Boolean,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -420,6 +489,8 @@ private fun LineupDetail(
 ) {
     val image = remember(l.image) { l.image?.let(loadImage) }
     var confirmDelete by remember { mutableStateOf(false) }
+    val clipboard = LocalClipboardManager.current
+    val setpos = LineupSteps.setposCommand(l)
     Column(
         Modifier
             .fillMaxWidth()
@@ -435,8 +506,11 @@ private fun LineupDetail(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 letterSpacing = 1.sp,
-                modifier = Modifier.padding(start = 8.dp),
+                modifier = Modifier.padding(start = 8.dp).weight(1f),
             )
+            TextButton(onClick = onToggleFavourite) {
+                Text(if (favourite) "★" else "☆", fontSize = 22.sp, color = if (favourite) Palette.warn else MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
         Text(l.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         Text(
@@ -460,12 +534,16 @@ private fun LineupDetail(
                 modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium),
             )
         }
-        Step(1, "Go to ${l.fromName}", l.fromZ?.let { z ->
-            if (l.aim.pitch != null && l.aim.yaw != null) "Practice server: setpos ${l.from.x} ${l.from.y} $z;setang ${l.aim.pitch} ${l.aim.yaw} 0" else null
-        })
-        Step(2, l.stance.label, "Aim: ${l.aim.description}")
-        Step(3, l.movement.label, l.click.label)
-        l.notes?.let { Field("Notes", it) }
+        LineupSteps.of(l, radar).forEachIndexed { i, step ->
+            val isSetpos = setpos != null && step.detail == setpos
+            Step(i + 1, step.title, if (isSetpos) "Practice server: $setpos" else step.detail)
+            if (isSetpos && setpos != null) {
+                TextButton(
+                    onClick = { clipboard.setText(AnnotatedString(setpos)) },
+                    modifier = Modifier.padding(start = 32.dp),
+                ) { Text("Copy command") }
+            }
+        }
         if (l.placeholder) {
             Button(onClick = onRecord) { Text("Record this lineup") }
         }

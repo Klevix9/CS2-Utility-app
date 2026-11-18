@@ -1,0 +1,12 @@
+{
+  "id": "de_anubis",
+  "displayName": "Anubis",
+  "radar": {
+    "image": "radars/de_anubis.png",
+    "posX": -2796,
+    "posY": 3328,
+    "scale": 5.22,
+    "sizePx": 1024
+  },
+  "lineups": []
+}
