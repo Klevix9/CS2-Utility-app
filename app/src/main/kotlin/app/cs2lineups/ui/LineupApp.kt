@@ -70,7 +70,7 @@ private enum class Mode { BROWSE, PICK_FROM, PICK_TARGET }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LineupApp(repo: LineupRepository) {
+fun LineupApp(repo: LineupRepository, maps: List<Pair<String, String>>, onSwitchMap: (String) -> Unit) {
     val map = repo.map
     var grenade by remember { mutableStateOf(Grenade.SMOKE) }
     var side by remember { mutableStateOf<Side?>(null) }
@@ -81,6 +81,7 @@ fun LineupApp(repo: LineupRepository) {
     var draft by remember { mutableStateOf(emptyList<WorldPos>()) }
     var editing by remember { mutableStateOf<Lineup?>(null) }
     var menuOpen by remember { mutableStateOf(false) }
+    var mapMenuOpen by remember { mutableStateOf(false) }
 
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -96,7 +97,7 @@ fun LineupApp(repo: LineupRepository) {
     }
     val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) runCatching { repo.importFrom(uri) }
-            .onSuccess { toast(if (it == 0) "No Dust II lineups in that file" else "Imported $it lineup${if (it == 1) "" else "s"}") }
+            .onSuccess { toast(if (it == 0) "No ${map.displayName} lineups in that file" else "Imported $it lineup${if (it == 1) "" else "s"}") }
             .onFailure { toast("That file isn't a lineup export.") }
     }
 
@@ -123,7 +124,18 @@ fun LineupApp(repo: LineupRepository) {
             ) {
                 Column(Modifier.weight(1f)) {
                     Text("CS2 UTILITY", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, letterSpacing = 1.5.sp)
-                    Text(map.displayName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    Box {
+                        Text(
+                            map.displayName + " ▾", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.clickable { mapMenuOpen = true },
+                        )
+                        DropdownMenu(expanded = mapMenuOpen, onDismissRequest = { mapMenuOpen = false }) {
+                            for ((id, name) in maps) DropdownMenuItem(
+                                text = { Text(name) },
+                                onClick = { mapMenuOpen = false; if (id != map.id) onSwitchMap(id) },
+                            )
+                        }
+                    }
                 }
                 if (mode == Mode.BROWSE) {
                     TextButton(onClick = { mode = Mode.PICK_FROM; draft = emptyList(); targetId = null }) {
@@ -142,7 +154,7 @@ fun LineupApp(repo: LineupRepository) {
                         DropdownMenuItem(
                             text = { Text("Export my lineups…") },
                             enabled = repo.userLineups.isNotEmpty(),
-                            onClick = { menuOpen = false; exporter.launch("dust2-lineups.json") },
+                            onClick = { menuOpen = false; exporter.launch("${map.id.removePrefix("de_")}-lineups.json") },
                         )
                         DropdownMenuItem(
                             text = { Text("Import lineups…") },

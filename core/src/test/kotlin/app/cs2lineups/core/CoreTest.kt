@@ -11,6 +11,28 @@ class CoreTest {
     private val dust2 = MapParser.parse(File(dataDir, "maps/de_dust2.json").readText())
 
     @Test
+    fun `every bundled map parses and the radar centre is inside it`() {
+        val files = File(dataDir, "maps").listFiles { f -> f.extension == "json" }!!
+        assertEquals(7, files.size)
+        for (f in files) {
+            val m = MapParser.parse(f.readText())
+            assertEquals(f.nameWithoutExtension, m.id)
+            val (u, v) = RadarProjection(m.radar).toRadar(RadarProjection(m.radar).toWorld(0.5, 0.5))
+            assertTrue(abs(u - 0.5) < 1e-9 && abs(v - 0.5) < 1e-9)
+        }
+    }
+
+    @Test
+    fun `bundled radar images are square at sizePx`() {
+        for (f in File(dataDir, "maps").listFiles { f -> f.extension == "json" }!!) {
+            val r = MapParser.parse(f.readText()).radar
+            val img = File(dataDir, r.image).takeIf { it.exists() } ?: continue
+            val bi = javax.imageio.ImageIO.read(img)!!
+            assertEquals(r.sizePx to r.sizePx, bi.width to bi.height, img.name)
+        }
+    }
+
+    @Test
     fun `projection round-trips`() {
         val proj = RadarProjection(dust2.radar)
         val p = WorldPos(123.0, -456.0)

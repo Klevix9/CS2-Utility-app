@@ -1,0 +1,12 @@
+{
+  "id": "de_cache",
+  "displayName": "Cache",
+  "radar": {
+    "image": "radars/de_cache.png",
+    "posX": -2000,
+    "posY": 3250,
+    "scale": 5.5,
+    "sizePx": 1024
+  },
+  "lineups": []
+}

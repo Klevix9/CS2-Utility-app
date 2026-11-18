@@ -152,7 +152,7 @@ fun RadarView(
         }
         if (radarImage == null && map.layout == null) {
             Text(
-                "No radar image yet: ⋮ → Set radar image",
+                "No radar bundled for this map: ⋮ → Use my own radar image…",
                 style = MaterialTheme.typography.labelSmall,
                 color = Color.White.copy(alpha = 0.6f),
                 modifier = Modifier.align(Alignment.BottomCenter).padding(8.dp),

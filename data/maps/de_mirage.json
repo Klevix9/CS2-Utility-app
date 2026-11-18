@@ -1,0 +1,12 @@
+{
+  "id": "de_mirage",
+  "displayName": "Mirage",
+  "radar": {
+    "image": "radars/de_mirage.png",
+    "posX": -3230,
+    "posY": 1713,
+    "scale": 5.0,
+    "sizePx": 1024
+  },
+  "lineups": []
+}

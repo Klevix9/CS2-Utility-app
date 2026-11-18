@@ -1,0 +1,12 @@
+{
+  "id": "de_ancient",
+  "displayName": "Ancient",
+  "radar": {
+    "image": "radars/de_ancient.png",
+    "posX": -2953,
+    "posY": 2164,
+    "scale": 5.0,
+    "sizePx": 1024
+  },
+  "lineups": []
+}

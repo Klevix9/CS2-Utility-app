@@ -1,0 +1,12 @@
+{
+  "id": "de_nuke",
+  "displayName": "Nuke",
+  "radar": {
+    "image": "radars/de_nuke.png",
+    "posX": -3453,
+    "posY": 2887,
+    "scale": 7.0,
+    "sizePx": 1024
+  },
+  "lineups": []
+}
