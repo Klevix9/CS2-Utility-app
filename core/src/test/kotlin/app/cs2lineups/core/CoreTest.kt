@@ -199,3 +199,12 @@ class FilterTest {
         assertEquals(Level.UPPER, l("a", Grenade.SMOKE, Side.T, "t").fromLevel(nuke.radar))
     }
 }
+
+class PracticeConfigTest {
+    @Test fun `script lists every command once`() {
+        val lines = PracticeConfig.script().lines()
+        assertEquals(PracticeConfig.commands.size, lines.size)
+        assertEquals(lines.size, lines.toSet().size)
+        assertTrue(lines.first() == "sv_cheats 1")
+    }
+}
