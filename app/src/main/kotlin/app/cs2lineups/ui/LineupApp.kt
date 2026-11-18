@@ -393,7 +393,7 @@ private fun ThrowOptions(
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     if (hasMe) Text("${m.distance.toInt()} u away", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (m.lineup.placeholder) Text("Placeholder", style = MaterialTheme.typography.labelSmall, color = Palette.warn)
+                    if (m.lineup.placeholder) Text("Unrecorded", style = MaterialTheme.typography.labelSmall, color = Palette.warn)
                     else if (m.lineup.id.startsWith("user-")) Text("Mine", style = MaterialTheme.typography.labelSmall, color = Palette.mine)
                 }
             }
