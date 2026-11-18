@@ -84,6 +84,8 @@ data class Lineup(
     val notes: String? = null,
     /** True for seeded entries whose coordinates and aim still need recording in-game. */
     val placeholder: Boolean = false,
+    /** Id of the unrecorded lineup this one was recorded to replace, if any. */
+    val replaces: String? = null,
 )
 
 /**
@@ -99,10 +101,30 @@ data class Radar(
     val sizePx: Int = 1024,
 )
 
+/** One walkable region of the drawn map, as a polygon in world units. */
+@Serializable
+data class Area(
+    /** "floor", "site" or "spawn". */
+    val kind: String = "floor",
+    val points: List<WorldPos>,
+)
+
+/** A place name shown on the drawn map. */
+@Serializable
+data class Callout(val name: String, val pos: WorldPos)
+
+/** An original, simplified drawing of the map, used when no radar image is set. */
+@Serializable
+data class Layout(
+    val areas: List<Area> = emptyList(),
+    val callouts: List<Callout> = emptyList(),
+)
+
 @Serializable
 data class MapData(
     val id: String,
     val displayName: String,
     val radar: Radar,
+    val layout: Layout? = null,
     val lineups: List<Lineup>,
 )

@@ -10,6 +10,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import app.cs2lineups.core.Lineup
+import app.cs2lineups.core.LineupExchange
+import app.cs2lineups.core.RadarProjection
 import app.cs2lineups.core.MapData
 import app.cs2lineups.core.MapParser
 import kotlinx.serialization.builtins.ListSerializer
@@ -41,7 +43,49 @@ class LineupRepository(private val context: Context, mapId: String) {
     var radarImage by mutableStateOf(loadRadar())
         private set
 
-    val allLineups: List<Lineup> get() = map.lineups + userLineups
+    private val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+
+    /** Whether to show bundled lineups that haven't been recorded in-game yet. */
+    var showUnrecorded by mutableStateOf(prefs.getBoolean("showUnrecorded", true))
+        private set
+
+    fun setShowUnrecorded(show: Boolean) {
+        showUnrecorded = show
+        prefs.edit().putBoolean("showUnrecorded", show).apply()
+    }
+
+    val allLineups: List<Lineup>
+        get() {
+            val replaced = userLineups.mapNotNull { it.replaces }.toSet()
+            return map.lineups.filter { it.id !in replaced && (showUnrecorded || !it.placeholder) } + userLineups
+        }
+
+    /** Writes the player's own lineups to a file they picked. Returns how many were written. */
+    fun exportTo(uri: Uri): Int {
+        val list = userLineups.map { it.copy(image = null) }
+        context.contentResolver.openOutputStream(uri, "wt")!!.bufferedWriter().use {
+            it.write(LineupExchange.encode(map.id, list))
+        }
+        return list.size
+    }
+
+    /** Adds lineups from a shared file. Returns how many were added or updated. */
+    fun importFrom(uri: Uri): Int {
+        val text = context.contentResolver.openInputStream(uri)!!.bufferedReader().use { it.readText() }
+        val bundledIds = map.lineups.map { it.id }.toSet()
+        val incoming = LineupExchange.decode(text)
+            .filter { RadarProjection(map.radar).toRadar(it.from).let { (u, v) -> u in 0.0..1.0 && v in 0.0..1.0 } }
+            .map { l ->
+                val id = if (l.id in bundledIds || !l.id.startsWith("user-")) newId() else l.id
+                l.copy(id = id, image = null, placeholder = false)
+            }
+        for (l in incoming) {
+            val i = userLineups.indexOfFirst { it.id == l.id }
+            if (i >= 0) userLineups[i] = l else userLineups.add(l)
+        }
+        persist()
+        return incoming.size
+    }
 
     fun isUserLineup(l: Lineup) = userLineups.any { it.id == l.id }
 

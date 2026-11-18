@@ -78,7 +78,7 @@ fun LineupForm(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text(
-            if (initial.title.isBlank()) "New lineup" else "Edit lineup",
+            if (initial.aim.description.isBlank()) "Record lineup" else "Edit lineup",
             style = MaterialTheme.typography.headlineSmall,
         )
         OutlinedTextField(title, { title = it }, label = { Text("Name (e.g. Xbox smoke)") }, singleLine = true, modifier = Modifier.fillMaxWidth())

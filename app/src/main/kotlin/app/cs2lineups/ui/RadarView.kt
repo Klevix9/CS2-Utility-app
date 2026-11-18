@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -30,7 +31,9 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.cs2lineups.core.Area
 import app.cs2lineups.core.Grenade
+import app.cs2lineups.core.Layout
 import app.cs2lineups.core.Lineup
 import app.cs2lineups.core.MapData
 import app.cs2lineups.core.RadarProjection
@@ -71,7 +74,7 @@ fun RadarView(
         modifier
             .fillMaxWidth()
             .aspectRatio(1f)
-            .background(Color(0xFF1B1F23)),
+            .background(Palette.ground),
     ) {
         Canvas(
             Modifier
@@ -100,15 +103,17 @@ fun RadarView(
                     }
                 },
         ) {
-            if (radarImage != null) {
-                drawImage(radarImage, dstSize = IntSize(size.width.toInt(), size.height.toInt()))
-            } else {
-                drawGrid()
-            }
-
             fun at(p: WorldPos): Offset {
                 val (u, v) = proj.toRadar(p)
                 return Offset((u * size.width).toFloat(), (v * size.height).toFloat())
+            }
+
+            val layout = map.layout
+            when {
+                radarImage != null ->
+                    drawImage(radarImage, dstSize = IntSize(size.width.toInt(), size.height.toInt()))
+                layout != null -> drawLayout(layout, textMeasurer, ::at)
+                else -> drawGrid()
             }
 
             me?.let {
@@ -138,14 +143,14 @@ fun RadarView(
             }
 
             if (draft.size == 2) {
-                drawLine(Color.Cyan, at(draft[0]), at(draft[1]), strokeWidth = 2.dp.toPx())
+                drawLine(Palette.draft, at(draft[0]), at(draft[1]), strokeWidth = 2.dp.toPx())
             }
             draft.forEachIndexed { i, p ->
-                if (i == 0) drawCircle(Color.Cyan, 6.dp.toPx(), at(p))
-                else drawCircle(Color.Cyan, 9.dp.toPx(), at(p), style = Stroke(2.dp.toPx()))
+                if (i == 0) drawCircle(Palette.draft, 6.dp.toPx(), at(p))
+                else drawCircle(Palette.draft, 9.dp.toPx(), at(p), style = Stroke(2.dp.toPx()))
             }
         }
-        if (radarImage == null) {
+        if (radarImage == null && map.layout == null) {
             Text(
                 "No radar image yet: ⋮ → Set radar image",
                 style = MaterialTheme.typography.labelSmall,
@@ -175,6 +180,33 @@ private fun DrawScope.drawGrenadeIcon(tm: TextMeasurer, g: Grenade, at: Offset, 
 private fun DrawScope.drawCentredText(tm: TextMeasurer, text: String, at: Offset, color: Color) {
     val layout = tm.measure(text, TextStyle(color = color, fontSize = 11.sp, fontWeight = FontWeight.Bold))
     drawText(layout, topLeft = at - Offset(layout.size.width / 2f, layout.size.height / 2f))
+}
+
+/** Draws the original schematic map: floor, bombsites, spawns and callout names. */
+private fun DrawScope.drawLayout(layout: Layout, tm: TextMeasurer, at: (WorldPos) -> Offset) {
+    fun path(a: Area) = Path().apply {
+        a.points.forEachIndexed { i, p -> val o = at(p); if (i == 0) moveTo(o.x, o.y) else lineTo(o.x, o.y) }
+        close()
+    }
+    val corner = PathEffect.cornerPathEffect(6.dp.toPx())
+    // Soft outline first so the joined floor reads as one shape.
+    for (a in layout.areas) drawPath(path(a), Palette.floor.copy(alpha = 0.5f), style = Stroke(6.dp.toPx(), pathEffect = corner))
+    for (a in layout.areas) {
+        val fill = when (a.kind) {
+            "site" -> Palette.site
+            "spawn" -> Palette.spawn
+            else -> Palette.floor
+        }
+        drawPath(path(a), fill)
+    }
+    for (a in layout.areas.filter { it.kind == "site" }) {
+        drawPath(path(a), Palette.siteEdge.copy(alpha = 0.55f), style = Stroke(1.5.dp.toPx(), pathEffect = corner))
+    }
+    val style = TextStyle(color = Palette.callout.copy(alpha = 0.55f), fontSize = 9.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.6.sp)
+    for (c in layout.callouts) {
+        val l = tm.measure(c.name.uppercase(), style)
+        drawText(l, topLeft = at(c.pos) - Offset(l.size.width / 2f, l.size.height / 2f))
+    }
 }
 
 private fun DrawScope.drawGrid() {

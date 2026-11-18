@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Original icon: a throw arc landing in a crosshair. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:strokeColor="#F0B54A" android:strokeWidth="4" android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M30,72 Q42,28 66,48" />
+    <path android:fillColor="#F0B54A" android:pathData="M30,72 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+    <path android:strokeColor="#ECE6DD" android:strokeWidth="3.5" android:fillColor="#00000000"
+        android:pathData="M68,54 m-12,0 a12,12 0 1,0 24,0 a12,12 0 1,0 -24,0" />
+    <path android:strokeColor="#ECE6DD" android:strokeWidth="3" android:strokeLineCap="round"
+        android:pathData="M68,36 L68,44 M68,64 L68,72 M50,54 L58,54 M78,54 L86,54" />
+</vector>

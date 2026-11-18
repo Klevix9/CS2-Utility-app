@@ -18,8 +18,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Test lineup logic and data
         run: ./gradlew :core:test
-      - name: Build debug APK
-        run: ./gradlew :app:assembleDebug
+      - name: Build debug APK and check the release build compiles
+        run: ./gradlew :app:assembleDebug :app:assembleRelease
       - uses: actions/upload-artifact@v4
         with:
           name: cs2-utility-debug-apk

@@ -4,8 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
+import app.cs2lineups.ui.AppTheme
 import app.cs2lineups.ui.LineupApp
 
 class MainActivity : ComponentActivity() {
@@ -14,7 +13,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         val repo = LineupRepository(applicationContext, "de_dust2")
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme()) {
+            AppTheme {
                 LineupApp(repo)
             }
         }

@@ -92,3 +92,28 @@ class TargetsTest {
         assertTrue(!Targets.reachable(t, WorldPos(-5000.0, 0.0)))
     }
 }
+
+class ExchangeTest {
+    private val l = Lineup(
+        id = "user-1", title = "t", grenade = Grenade.FLASH, from = WorldPos(1.0, 2.0), fromName = "a",
+        target = WorldPos(3.0, 4.0), targetName = "b", aim = Aim("aim"),
+    )
+
+    @Test
+    fun `round trips an export`() {
+        assertEquals(listOf(l), LineupExchange.decode(LineupExchange.encode("de_dust2", listOf(l))))
+    }
+
+    @Test
+    fun `reads a bare list and a map file`() {
+        val dataDir = java.io.File(System.getProperty("dataDir"))
+        val mapText = java.io.File(dataDir, "maps/de_dust2.json").readText()
+        assertTrue(LineupExchange.decode(mapText).isNotEmpty())
+        assertEquals(1, LineupExchange.decode("[" + LineupExchange.encode("x", listOf(l)).substringAfter("[").substringBeforeLast("]") + "]").size)
+    }
+
+    @Test
+    fun `rejects junk`() {
+        kotlin.test.assertFailsWith<IllegalArgumentException> { LineupExchange.decode("hello") }
+    }
+}

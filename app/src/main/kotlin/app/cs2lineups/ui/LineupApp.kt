@@ -26,6 +26,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.cs2lineups.LineupRepository
@@ -75,8 +82,22 @@ fun LineupApp(repo: LineupRepository) {
     var editing by remember { mutableStateOf<Lineup?>(null) }
     var menuOpen by remember { mutableStateOf(false) }
 
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    fun toast(msg: String) { scope.launch { snackbar.showSnackbar(msg) } }
+
     val radarPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) repo.setRadar(uri)
+    }
+    val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) runCatching { repo.exportTo(uri) }
+            .onSuccess { toast("Exported $it lineup${if (it == 1) "" else "s"}") }
+            .onFailure { toast("Couldn't save the file. Try another folder.") }
+    }
+    val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) runCatching { repo.importFrom(uri) }
+            .onSuccess { toast(if (it == 0) "No Dust II lineups in that file" else "Imported $it lineup${if (it == 1) "" else "s"}") }
+            .onFailure { toast("That file isn't a lineup export.") }
     }
 
     val visible = repo.allLineups.filter {
@@ -93,12 +114,17 @@ fun LineupApp(repo: LineupRepository) {
     }
 
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+      Box(Modifier.fillMaxSize()) {
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).safeDrawingPadding())
         Column(Modifier.safeDrawingPadding()) {
             Row(
                 Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(map.displayName, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                Column(Modifier.weight(1f)) {
+                    Text("CS2 UTILITY", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, letterSpacing = 1.5.sp)
+                    Text(map.displayName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                }
                 if (mode == Mode.BROWSE) {
                     TextButton(onClick = { mode = Mode.PICK_FROM; draft = emptyList(); targetId = null }) {
                         Text("+ Add lineup")
@@ -108,7 +134,23 @@ fun LineupApp(repo: LineupRepository) {
                     TextButton(onClick = { menuOpen = true }) { Text("⋮") }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                         DropdownMenuItem(
-                            text = { Text("Set radar image…") },
+                            text = { Text("Show unrecorded lineups") },
+                            trailingIcon = { Checkbox(checked = repo.showUnrecorded, onCheckedChange = null) },
+                            onClick = { repo.setShowUnrecorded(!repo.showUnrecorded); targetId = null },
+                        )
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text("Export my lineups…") },
+                            enabled = repo.userLineups.isNotEmpty(),
+                            onClick = { menuOpen = false; exporter.launch("dust2-lineups.json") },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Import lineups…") },
+                            onClick = { menuOpen = false; importer.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
+                        )
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text("Use my own radar image…") },
                             onClick = {
                                 menuOpen = false
                                 radarPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
@@ -116,7 +158,7 @@ fun LineupApp(repo: LineupRepository) {
                         )
                         if (repo.hasCustomRadar) {
                             DropdownMenuItem(
-                                text = { Text("Remove radar image") },
+                                text = { Text("Use drawn map again") },
                                 onClick = { menuOpen = false; repo.clearRadar() },
                             )
                         }
@@ -141,7 +183,7 @@ fun LineupApp(repo: LineupRepository) {
                     Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 4.dp)
-                        .background(Color(0xFF004D57), MaterialTheme.shapes.small)
+                        .background(MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.shapes.small)
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -149,7 +191,7 @@ fun LineupApp(repo: LineupRepository) {
                         if (mode == Mode.PICK_FROM) "Step 1 of 2: tap where you throw from"
                         else "Step 2 of 2: tap where the grenade lands",
                         modifier = Modifier.weight(1f),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
                     )
                     TextButton(onClick = ::cancelAdd) { Text("Cancel") }
                 }
@@ -202,6 +244,7 @@ fun LineupApp(repo: LineupRepository) {
                 )
             }
         }
+      }
     }
 
     selected?.let { lineup ->
@@ -212,6 +255,12 @@ fun LineupApp(repo: LineupRepository) {
                 mine = repo.isUserLineup(lineup),
                 onEdit = { selected = null; editing = lineup },
                 onDelete = { repo.delete(lineup); selected = null },
+                onRecord = {
+                    selected = null
+                    editing = lineup.copy(
+                        id = repo.newId(), aim = Aim(""), placeholder = false, replaces = lineup.id,
+                    )
+                },
             )
         }
     }
@@ -344,8 +393,8 @@ private fun ThrowOptions(
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     if (hasMe) Text("${m.distance.toInt()} u away", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (m.lineup.placeholder) Text("Placeholder", style = MaterialTheme.typography.labelSmall, color = Color(0xFFFFB74D))
-                    else if (m.lineup.id.startsWith("user-")) Text("Mine", style = MaterialTheme.typography.labelSmall, color = Color.Cyan)
+                    if (m.lineup.placeholder) Text("Placeholder", style = MaterialTheme.typography.labelSmall, color = Palette.warn)
+                    else if (m.lineup.id.startsWith("user-")) Text("Mine", style = MaterialTheme.typography.labelSmall, color = Palette.mine)
                 }
             }
             HorizontalDivider()
@@ -367,6 +416,7 @@ private fun LineupDetail(
     mine: Boolean,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    onRecord: () -> Unit,
 ) {
     val image = remember(l.image) { l.image?.let(loadImage) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -376,32 +426,50 @@ private fun LineupDetail(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)
             .padding(bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(l.title, style = MaterialTheme.typography.headlineSmall)
-        Text("${l.grenade.label} · ${l.side.label} side", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        if (l.placeholder) {
-            Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Dot(l.grenade.color)
             Text(
-                "Placeholder: position and aim still need recording on a practice server.",
-                color = Color(0xFFFFB74D),
-                style = MaterialTheme.typography.bodySmall,
+                "${l.grenade.label.uppercase()} · ${l.side.label} SIDE",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                letterSpacing = 1.sp,
+                modifier = Modifier.padding(start = 8.dp),
             )
         }
-        Spacer(Modifier.height(12.dp))
-        image?.let {
-            Image(it, contentDescription = "Aim point", contentScale = ContentScale.FillWidth, modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(12.dp))
+        Text(l.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+        Text(
+            "From ${l.fromName} to ${l.targetName}",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (l.placeholder) {
+            Text(
+                "Not recorded yet. The spot is approximate and there's no aim point. On a practice server, stand here, aim, and tap Record this lineup.",
+                color = Palette.warn,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Palette.warn.copy(alpha = 0.10f), MaterialTheme.shapes.small)
+                    .padding(10.dp),
+            )
         }
-        Field("Aim", l.aim.description)
-        Field("How to throw", "${l.stance.label} · ${l.movement.label} · ${l.click.label}")
-        Field("Stand at", l.fromName)
-        Field("Lands at", l.targetName)
+        image?.let {
+            Image(
+                it, contentDescription = "Aim point", contentScale = ContentScale.FillWidth,
+                modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium),
+            )
+        }
+        Step(1, "Go to ${l.fromName}", l.fromZ?.let { z ->
+            if (l.aim.pitch != null && l.aim.yaw != null) "Practice server: setpos ${l.from.x} ${l.from.y} $z;setang ${l.aim.pitch} ${l.aim.yaw} 0" else null
+        })
+        Step(2, l.stance.label, "Aim: ${l.aim.description}")
+        Step(3, l.movement.label, l.click.label)
         l.notes?.let { Field("Notes", it) }
-        if (l.fromZ != null && l.aim.pitch != null && l.aim.yaw != null) {
-            Field("Practice server command", "setpos ${l.from.x} ${l.from.y} ${l.fromZ};setang ${l.aim.pitch} ${l.aim.yaw} 0")
+        if (l.placeholder) {
+            Button(onClick = onRecord) { Text("Record this lineup") }
         }
         if (mine) {
-            Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = onEdit) { Text("Edit") }
                 if (confirmDelete) {
@@ -409,7 +477,25 @@ private fun LineupDetail(
                 } else {
                     TextButton(onClick = { confirmDelete = true }) { Text("Delete") }
                 }
-                Spacer(Modifier.width(1.dp))
+            }
+        }
+    }
+}
+
+/** One numbered step of the throw instructions. */
+@Composable
+private fun Step(n: Int, title: String, detail: String?) {
+    Row(verticalAlignment = Alignment.Top) {
+        Box(
+            Modifier.size(28.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("$n", color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
+        }
+        Column(Modifier.padding(start = 12.dp).weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            detail?.let {
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
