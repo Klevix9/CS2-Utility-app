@@ -22,7 +22,8 @@ code{background:#222;padding:2px 5px;border-radius:4px;font-size:12px;word-break
 <script>
 const MAPS=__MAPS__;
 const COL={smoke:'#B0BEC5',flash:'#FFEB3B',he:'#EF5350',molotov:'#FF9800'},LBL={smoke:'Smoke',flash:'Flash',he:'HE',molotov:'Molotov'};
-let st={map:'de_dust2',q:'',gr:new Set(['smoke']),side:null,favOnly:false,level:'upper',sel:null,fav:new Set(JSON.parse(localStorage.getItem('fav')||'[]'))};
+function loadFav(){try{return JSON.parse(localStorage.getItem('fav')||'[]')}catch(e){return[]}}
+let st={map:'de_dust2',q:'',gr:new Set(['smoke']),side:null,favOnly:false,level:'upper',sel:null,fav:new Set(loadFav())};
 const imgs={};function img(src){if(!imgs[src]){const i=new Image();i.onload=render;i.src=src;imgs[src]=i}return imgs[src]}
 const M=()=>MAPS[st.map];
 const proj=(p,r)=>[(p.x-r.posX)/r.scale/r.sizePx,(r.posY-p.y)/r.scale/r.sizePx];
