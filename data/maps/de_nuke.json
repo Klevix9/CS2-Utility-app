@@ -6,7 +6,9 @@
     "posX": -3453,
     "posY": 2887,
     "scale": 7.0,
-    "sizePx": 1024
+    "sizePx": 1024,
+    "lowerImage": "radars/de_nuke_lower.png",
+    "lowerBelowZ": -495
   },
   "lineups": []
 }

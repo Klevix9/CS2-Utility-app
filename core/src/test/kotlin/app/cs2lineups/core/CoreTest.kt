@@ -139,3 +139,63 @@ class ExchangeTest {
         kotlin.test.assertFailsWith<IllegalArgumentException> { LineupExchange.decode("hello") }
     }
 }
+
+class FilterTest {
+    private fun l(id: String, g: Grenade, side: Side, title: String, placeholder: Boolean = false, z: Double? = null) = Lineup(
+        id = id, title = title, grenade = g, side = side, from = WorldPos(0.0, 0.0), fromName = "Spot $id", fromZ = z,
+        target = WorldPos(1.0, 1.0), targetName = "B Site", aim = Aim("corner"), placeholder = placeholder,
+    )
+    private val all = listOf(
+        l("a", Grenade.SMOKE, Side.T, "B doors smoke"),
+        l("b", Grenade.FLASH, Side.CT, "Short flash"),
+        l("c", Grenade.SMOKE, Side.BOTH, "Window smoke", placeholder = true),
+    )
+
+    @Test fun `default filter keeps everything`() {
+        assertTrue(LineupFilter().isDefault)
+        assertEquals(3, LineupFilter().apply(all).size)
+    }
+
+    @Test fun `filters by grenade and side, both-side lineups always match`() {
+        assertEquals(listOf("a", "c"), LineupFilter(grenades = setOf(Grenade.SMOKE)).apply(all).map { it.id })
+        assertEquals(listOf("b", "c"), LineupFilter(side = Side.CT).apply(all).map { it.id })
+    }
+
+    @Test fun `query needs every word and ignores case`() {
+        assertEquals(listOf("a"), LineupFilter(query = "DOORS smoke").apply(all).map { it.id })
+        assertEquals(3, LineupFilter(query = "b site").apply(all).size)
+        assertTrue(LineupFilter(query = "nothing").apply(all).isEmpty())
+    }
+
+    @Test fun `favourites and unrecorded`() {
+        assertEquals(listOf("b"), LineupFilter(favouritesOnly = true).apply(all, setOf("b")).map { it.id })
+        assertEquals(listOf("a", "b"), LineupFilter(includeUnrecorded = false).apply(all).map { it.id })
+    }
+
+    @Test fun `favourites toggle, encode, decode and prune`() {
+        val f = Favourites.toggle(emptySet(), "x")
+        assertEquals(emptySet(), Favourites.toggle(f, "x"))
+        assertEquals(setOf("a", "b"), Favourites.decode(Favourites.encode(setOf("b", "a"))))
+        assertEquals(emptySet(), Favourites.decode(null))
+        assertEquals(setOf("a"), Favourites.prune(setOf("a", "gone"), all))
+    }
+
+    @Test fun `steps include setpos only when fully recorded`() {
+        val plain = l("a", Grenade.SMOKE, Side.T, "t")
+        assertEquals(null, LineupSteps.setposCommand(plain))
+        assertEquals(3, LineupSteps.of(plain).size)
+        val rec = plain.copy(fromZ = -32.0, aim = Aim("corner", pitch = -12.5, yaw = 88.0), notes = "Jump early")
+        assertEquals("setpos 0 0 -32;setang -12.50 88 0", LineupSteps.setposCommand(rec))
+        assertEquals(4, LineupSteps.of(rec).size)
+    }
+
+    @Test fun `nuke has a lower level split by height`() {
+        val dataDir = java.io.File(System.getProperty("dataDir"))
+        val nuke = MapParser.parse(java.io.File(dataDir, "maps/de_nuke.json").readText())
+        assertTrue(nuke.radar.hasLowerLevel)
+        assertTrue(java.io.File(dataDir, nuke.radar.lowerImage!!).exists())
+        assertEquals(Level.LOWER, l("a", Grenade.SMOKE, Side.T, "t", z = -600.0).fromLevel(nuke.radar))
+        assertEquals(Level.UPPER, l("a", Grenade.SMOKE, Side.T, "t", z = -100.0).fromLevel(nuke.radar))
+        assertEquals(Level.UPPER, l("a", Grenade.SMOKE, Side.T, "t").fromLevel(nuke.radar))
+    }
+}

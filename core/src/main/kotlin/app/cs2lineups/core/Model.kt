@@ -86,7 +86,11 @@ data class Lineup(
     val placeholder: Boolean = false,
     /** Id of the unrecorded lineup this one was recorded to replace, if any. */
     val replaces: String? = null,
-)
+) {
+    /** Level of the throw spot. Unknown height counts as upper. */
+    fun fromLevel(radar: Radar): Level =
+        if (radar.lowerBelowZ != null && fromZ != null && fromZ < radar.lowerBelowZ) Level.LOWER else Level.UPPER
+}
 
 /**
  * Radar overview parameters. Values come from the map's overview file
@@ -99,7 +103,16 @@ data class Radar(
     val posY: Double,
     val scale: Double,
     val sizePx: Int = 1024,
-)
+    /** Radar image for the lower level of multi-level maps (same posX/posY/scale), if any. */
+    val lowerImage: String? = null,
+    /** Positions with a height (z) below this are on the lower level. */
+    val lowerBelowZ: Double? = null,
+) {
+    val hasLowerLevel: Boolean get() = lowerImage != null && lowerBelowZ != null
+}
+
+/** Which radar image a point belongs to on multi-level maps. */
+enum class Level { UPPER, LOWER }
 
 /** One walkable region of the drawn map, as a polygon in world units. */
 @Serializable
