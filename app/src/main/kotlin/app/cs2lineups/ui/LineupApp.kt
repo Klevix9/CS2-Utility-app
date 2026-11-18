@@ -136,7 +136,7 @@ fun LineupApp(repo: LineupRepository) {
                         DropdownMenuItem(
                             text = { Text("Show unrecorded lineups") },
                             trailingIcon = { Checkbox(checked = repo.showUnrecorded, onCheckedChange = null) },
-                            onClick = { repo.setShowUnrecorded(!repo.showUnrecorded); targetId = null },
+                            onClick = { repo.changeShowUnrecorded(!repo.showUnrecorded); targetId = null },
                         )
                         HorizontalDivider()
                         DropdownMenuItem(

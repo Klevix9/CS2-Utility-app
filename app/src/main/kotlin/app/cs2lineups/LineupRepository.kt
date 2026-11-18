@@ -49,7 +49,7 @@ class LineupRepository(private val context: Context, mapId: String) {
     var showUnrecorded by mutableStateOf(prefs.getBoolean("showUnrecorded", true))
         private set
 
-    fun setShowUnrecorded(show: Boolean) {
+    fun changeShowUnrecorded(show: Boolean) {
         showUnrecorded = show
         prefs.edit().putBoolean("showUnrecorded", show).apply()
     }
